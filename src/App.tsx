@@ -54,6 +54,7 @@ export default function App() {
         <CompDatabase
           properties={store.properties}
           addProperty={store.addProperty}
+          addMany={store.addMany}
           updateProperty={store.updateProperty}
           deleteProperty={store.deleteProperty}
           ready={store.ready}

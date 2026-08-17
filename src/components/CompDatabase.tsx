@@ -3,10 +3,14 @@ import type { Property } from "../types";
 import { TYPE_STYLE, avgPsfOf, fmtPsf, fmtRent, typeStyle } from "../lib/format";
 import PropertyCard from "./PropertyCard";
 import EditModal from "./EditModal";
+import CMAMap from "./CMAMap";
+import type { MapPin } from "./CMAMap";
+import BtrImport from "./BtrImport";
 
 export default function CompDatabase({
   properties,
   addProperty,
+  addMany,
   updateProperty,
   deleteProperty,
   ready,
@@ -14,6 +18,7 @@ export default function CompDatabase({
 }: {
   properties: Property[];
   addProperty: (p: Omit<Property, "id">) => void;
+  addMany: (p: Property[]) => void;
   updateProperty: (id: string, patch: Partial<Property>) => void;
   deleteProperty: (id: string) => void;
   ready: boolean;
@@ -26,6 +31,8 @@ export default function CompDatabase({
   const [sort, setSort] = useState("name");
   const [editing, setEditing] = useState<Property | null>(null);
   const [showEdit, setShowEdit] = useState(false);
+  const [showMap, setShowMap] = useState(false);
+  const [showBtrImport, setShowBtrImport] = useState(false);
 
   const allStates = useMemo(
     () => [...new Set(properties.map((p) => p.state).filter(Boolean))].sort() as string[],
@@ -170,10 +177,22 @@ export default function CompDatabase({
           </div>
           <div className="flex gap-2">
             <button
+              onClick={() => setShowMap(true)}
+              className="rounded-lg border border-[#CFE0D4] bg-white px-3.5 py-2 text-[13px] font-medium text-pine"
+            >
+              View Map
+            </button>
+            <button
               onClick={onRequestImport}
               className="rounded-lg border border-[#CFE0D4] bg-white px-3.5 py-2 text-[13px] font-medium text-pine"
             >
               Import CoStar
+            </button>
+            <button
+              onClick={() => setShowBtrImport(true)}
+              className="rounded-lg border border-[#CFE0D4] bg-white px-3.5 py-2 text-[13px] font-medium text-pine"
+            >
+              Import BTR Comps
             </button>
             <button
               onClick={exportCsv}
@@ -303,6 +322,32 @@ export default function CompDatabase({
             if (editing) updateProperty(editing.id, data);
             else addProperty(data);
             setShowEdit(false);
+          }}
+        />
+      )}
+
+      {showMap && (
+        <CMAMap
+          pins={filtered
+            .filter((p) => p.address)
+            .map((p) => ({
+              label: p.name,
+              address: [p.address, p.city, p.state, p.zip].filter(Boolean).join(", "),
+              detail: p.rent_min != null
+                ? `${p.rent_min !== p.rent_max && p.rent_max != null ? "$" + p.rent_min.toLocaleString() + "–$" + p.rent_max.toLocaleString() : "$" + p.rent_min.toLocaleString()}`
+                : undefined,
+              isSubject: false,
+            }))}
+          onClose={() => setShowMap(false)}
+        />
+      )}
+
+      {showBtrImport && (
+        <BtrImport
+          onClose={() => setShowBtrImport(false)}
+          onImport={(props) => {
+            addMany(props);
+            setShowBtrImport(false);
           }}
         />
       )}
