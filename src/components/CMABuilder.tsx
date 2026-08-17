@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import type { Floorplan, Property } from "../types";
 import { fmtPsf, fmtRent, typeStyle } from "../lib/format";
+import CMAMap from "./CMAMap";
+import type { MapPin } from "./CMAMap";
 
 /* ── Types ── */
 
@@ -374,6 +376,7 @@ export default function CMABuilder({ properties }: { properties: Property[] }) {
   const [pickerBeds, setPickerBeds] = useState<number | null>(null);
   const [cmaName, setCmaName] = useState("");
   const [showSubjectForm, setShowSubjectForm] = useState(true);
+  const [showMap, setShowMap] = useState(false);
 
   const setSub = (k: keyof Subject, v: any) => setSubject((s) => ({ ...s, [k]: v }));
 
@@ -435,6 +438,49 @@ export default function CMABuilder({ properties }: { properties: Property[] }) {
     return new Set((bk?.comps || []).map((c) => c.propertyId + "-" + c.floorplanIdx));
   };
 
+  const mapPins = useMemo((): MapPin[] => {
+    const pins: MapPin[] = [];
+    // Subject
+    if (subject.name && (subject.address || subject.city)) {
+      const addr = [subject.address, subject.city, subject.state, subject.zip]
+        .filter(Boolean)
+        .join(", ");
+      const avgRent =
+        subject.floorplans.length > 0
+          ? Math.round(
+              subject.floorplans.reduce((s, fp) => s + fp.askingRent, 0) / subject.floorplans.length
+            )
+          : null;
+      pins.push({
+        label: subject.name,
+        address: addr,
+        detail: avgRent ? `Asking: $${avgRent.toLocaleString()}` : undefined,
+        isSubject: true,
+      });
+    }
+    // Comps (deduplicate by property name + address)
+    const seen = new Set<string>();
+    buckets.forEach((bk) => {
+      bk.comps.forEach((c) => {
+        const prop = properties.find((p) => p.id === c.propertyId);
+        if (!prop || !prop.address) return;
+        const key = prop.name + "|" + prop.address;
+        if (seen.has(key)) return;
+        seen.add(key);
+        const addr = [prop.address, prop.city, prop.state, prop.zip].filter(Boolean).join(", ");
+        pins.push({
+          label: prop.name,
+          address: addr,
+          detail: c.askingRent ? `${bk.beds}BR: $${c.askingRent.toLocaleString()}` : undefined,
+          isSubject: false,
+        });
+      });
+    });
+    return pins;
+  }, [subject, buckets, properties]);
+
+  const canMap = mapPins.length >= 2;
+
   const inp =
     "w-full rounded-md border border-[#DDD9CF] bg-white px-2.5 py-2 text-[13px] font-body";
   const lbl = "mb-1 block text-[11px] font-semibold uppercase tracking-wide text-[#8A897F]";
@@ -452,6 +498,13 @@ export default function CMABuilder({ properties }: { properties: Property[] }) {
               Set your subject property, pull comps by bedroom, assign weights, and benchmark rents.
             </p>
           </div>
+          <button
+            onClick={() => setShowMap(true)}
+            disabled={!canMap}
+            className="rounded-lg border-none bg-pine px-4 py-2 text-[13px] font-medium text-white disabled:opacity-40"
+          >
+            Generate Map
+          </button>
         </div>
       </div>
 
@@ -713,6 +766,9 @@ export default function CMABuilder({ properties }: { properties: Property[] }) {
           onClose={() => setPickerBeds(null)}
         />
       )}
+
+      {/* Map Modal */}
+      {showMap && <CMAMap pins={mapPins} onClose={() => setShowMap(false)} />}
     </div>
   );
 }
