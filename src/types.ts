@@ -27,6 +27,8 @@ export interface Property {
   rent_min: number | null;
   rent_max: number | null;
   source?: string;
+  market?: string | null;
+  owner?: string | null;
 
   // CoStar-derived optional fields
   submarket?: string | null;

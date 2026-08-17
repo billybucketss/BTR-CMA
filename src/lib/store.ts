@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { Property } from "../types";
 import { SEED_PROPERTIES } from "../data/seed";
 
-const KEY = "btr_properties_v1";
+const KEY = "btr_properties_v2";
 
 function load(): Property[] {
   try {
@@ -76,6 +76,14 @@ export function useProperties() {
     [properties, commit]
   );
 
+  const deleteMany = useCallback(
+    (ids: string[]) => {
+      const idSet = new Set(ids);
+      commit(properties.filter((p) => !idSet.has(p.id)));
+    },
+    [properties, commit]
+  );
+
   const resetToSeed = useCallback(() => {
     commit(SEED_PROPERTIES);
   }, [commit]);
@@ -87,6 +95,7 @@ export function useProperties() {
     addMany,
     updateProperty,
     deleteProperty,
+    deleteMany,
     resetToSeed,
   };
 }

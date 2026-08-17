@@ -57,6 +57,7 @@ export default function App() {
           addMany={store.addMany}
           updateProperty={store.updateProperty}
           deleteProperty={store.deleteProperty}
+          deleteMany={store.deleteMany}
           ready={store.ready}
           onRequestImport={() => setShowImport(true)}
         />
