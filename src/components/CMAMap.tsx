@@ -8,6 +8,8 @@ export interface MapPin {
   detail?: string;
   isSubject?: boolean;
   fallback?: string; // e.g. "City, ST" to try if full address fails
+  lat?: number | null; // if present, skip geocoding
+  lng?: number | null;
 }
 
 interface GeocodedPin extends MapPin {
@@ -54,15 +56,23 @@ async function geocodeAll(
   onProgress: (done: number, total: number) => void
 ): Promise<GeocodedPin[]> {
   const results: GeocodedPin[] = [];
-  for (let i = 0; i < pins.length; i++) {
-    onProgress(i, pins.length);
-    const coords = await geocode(pins[i]);
-    if (coords) {
-      results.push({ ...pins[i], ...coords });
+  // Pins that already have coordinates need no geocoding.
+  const needGeocode = pins.filter((p) => p.lat == null || p.lng == null);
+  pins.forEach((p) => {
+    if (p.lat != null && p.lng != null) {
+      results.push({ ...p, lat: p.lat, lng: p.lng });
     }
-    if (i < pins.length - 1) await delay(1100);
+  });
+
+  for (let i = 0; i < needGeocode.length; i++) {
+    onProgress(i, needGeocode.length);
+    const coords = await geocode(needGeocode[i]);
+    if (coords) {
+      results.push({ ...needGeocode[i], ...coords });
+    }
+    if (i < needGeocode.length - 1) await delay(1100);
   }
-  onProgress(pins.length, pins.length);
+  onProgress(needGeocode.length, needGeocode.length);
   return results;
 }
 
@@ -128,7 +138,9 @@ export default function CMAMap({
         const L = await loadLeaflet();
         if (cancelled) return;
 
-        setStatus("geocoding");
+        const needsGeocoding = pins.some((p) => p.lat == null || p.lng == null);
+        if (needsGeocoding) setStatus("geocoding");
+
         const geocoded = await geocodeAll(pins, (done, total) => {
           if (!cancelled) setProgress({ done, total });
         });

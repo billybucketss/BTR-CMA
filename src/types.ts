@@ -29,6 +29,8 @@ export interface Property {
   source?: string;
   market?: string | null;
   owner?: string | null;
+  lat?: number | null;
+  lng?: number | null;
 
   // CoStar-derived optional fields
   submarket?: string | null;

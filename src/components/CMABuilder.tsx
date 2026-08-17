@@ -560,6 +560,8 @@ export default function CMABuilder({
           label: prop.name,
           address: buildAddress(prop),
           fallback: cityStateFallback(prop),
+          lat: prop.lat,
+          lng: prop.lng,
           detail: c.askingRent ? `${bk.beds}BR: $${c.askingRent.toLocaleString()}` : undefined,
           isSubject: false,
         });

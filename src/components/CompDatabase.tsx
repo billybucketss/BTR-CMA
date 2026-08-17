@@ -525,11 +525,13 @@ export default function CompDatabase({
       {showMap && (
         <CMAMap
           pins={filtered
-            .filter((p) => p.address || p.city)
+            .filter((p) => p.lat != null || p.address || p.city)
             .map((p) => ({
               label: p.name,
               address: buildAddress(p),
               fallback: cityStateFallback(p),
+              lat: p.lat,
+              lng: p.lng,
               detail:
                 p.rent_min != null
                   ? p.rent_min !== p.rent_max && p.rent_max != null
