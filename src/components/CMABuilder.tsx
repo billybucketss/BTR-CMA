@@ -1,8 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Floorplan, Property } from "../types";
 import { fmtPsf, fmtRent, typeStyle } from "../lib/format";
 import CMAMap from "./CMAMap";
 import type { MapPin } from "./CMAMap";
+import { useCMAs } from "../lib/cma-store";
+import type { SavedCMA } from "../lib/cma-store";
 
 /* ── Types ── */
 
@@ -367,6 +369,7 @@ function BucketSection({
 /* ── Main CMA Builder ── */
 
 export default function CMABuilder({ properties }: { properties: Property[] }) {
+  const cmaStore = useCMAs();
   const [subject, setSubject] = useState<Subject>(BLANK_SUBJECT);
   const [buckets, setBuckets] = useState<BedroomBucket[]>([
     { beds: 2, comps: [] },
@@ -377,6 +380,52 @@ export default function CMABuilder({ properties }: { properties: Property[] }) {
   const [cmaName, setCmaName] = useState("");
   const [showSubjectForm, setShowSubjectForm] = useState(true);
   const [showMap, setShowMap] = useState(false);
+  const [currentCmaId, setCurrentCmaId] = useState<string | null>(null);
+  const [showLoadPanel, setShowLoadPanel] = useState(false);
+  const [savedFlash, setSavedFlash] = useState(false);
+
+  // Load a saved CMA into the builder
+  const loadCMA = (cma: SavedCMA) => {
+    setCmaName(cma.name);
+    setSubject(cma.subject);
+    setBuckets(cma.buckets);
+    setCurrentCmaId(cma.id);
+    setShowLoadPanel(false);
+    setShowSubjectForm(true);
+  };
+
+  // Start a fresh CMA
+  const newCMA = () => {
+    if (
+      (cmaName || subject.name || buckets.some((b) => b.comps.length > 0)) &&
+      !confirm("Start a new CMA? Any unsaved changes will be lost.")
+    ) {
+      return;
+    }
+    setCmaName("");
+    setSubject(BLANK_SUBJECT);
+    setBuckets([
+      { beds: 2, comps: [] },
+      { beds: 3, comps: [] },
+      { beds: 4, comps: [] },
+    ]);
+    setCurrentCmaId(null);
+    setShowSubjectForm(true);
+  };
+
+  const handleSave = () => {
+    if (!cmaName.trim()) {
+      alert("Give your CMA a name before saving.");
+      return;
+    }
+    const id = cmaStore.saveCMA(
+      { name: cmaName.trim(), subject, buckets },
+      currentCmaId || undefined
+    );
+    setCurrentCmaId(id);
+    setSavedFlash(true);
+    setTimeout(() => setSavedFlash(false), 2000);
+  };
 
   const setSub = (k: keyof Subject, v: any) => setSubject((s) => ({ ...s, [k]: v }));
 
@@ -488,7 +537,7 @@ export default function CMABuilder({ properties }: { properties: Property[] }) {
   return (
     <div>
       <div className="sticky top-0 z-10 border-b border-line bg-paper px-6 py-5">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2.5">
               <div className="h-[22px] w-2 rounded-sm bg-pine" />
@@ -498,13 +547,33 @@ export default function CMABuilder({ properties }: { properties: Property[] }) {
               Set your subject property, pull comps by bedroom, assign weights, and benchmark rents.
             </p>
           </div>
-          <button
-            onClick={() => setShowMap(true)}
-            disabled={!canMap}
-            className="rounded-lg border-none bg-pine px-4 py-2 text-[13px] font-medium text-white disabled:opacity-40"
-          >
-            Generate Map
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowLoadPanel(true)}
+              className="rounded-lg border border-[#E0DCD2] bg-white px-3.5 py-2 text-[13px] font-medium text-[#5A594F]"
+            >
+              Open{cmaStore.cmas.length > 0 ? ` (${cmaStore.cmas.length})` : ""}
+            </button>
+            <button
+              onClick={newCMA}
+              className="rounded-lg border border-[#E0DCD2] bg-white px-3.5 py-2 text-[13px] font-medium text-[#5A594F]"
+            >
+              New
+            </button>
+            <button
+              onClick={handleSave}
+              className="rounded-lg border-none bg-pine px-4 py-2 text-[13px] font-medium text-white"
+            >
+              {savedFlash ? "Saved ✓" : currentCmaId ? "Save" : "Save CMA"}
+            </button>
+            <button
+              onClick={() => setShowMap(true)}
+              disabled={!canMap}
+              className="rounded-lg border border-[#CFE0D4] bg-white px-4 py-2 text-[13px] font-medium text-pine disabled:opacity-40"
+            >
+              Generate Map
+            </button>
+          </div>
         </div>
       </div>
 
@@ -769,6 +838,96 @@ export default function CMABuilder({ properties }: { properties: Property[] }) {
 
       {/* Map Modal */}
       {showMap && <CMAMap pins={mapPins} onClose={() => setShowMap(false)} />}
+
+      {/* Open CMA Panel */}
+      {showLoadPanel && (
+        <div
+          onClick={() => setShowLoadPanel(false)}
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-black/40 p-6"
+        >
+          <div
+            onClick={(e: any) => e.stopPropagation()}
+            className="w-full max-w-[560px] rounded-2xl bg-paper p-6 shadow-2xl"
+          >
+            <div className="mb-1 font-display text-lg font-semibold">Open a saved CMA</div>
+            <p className="mb-4 mt-0 text-[12.5px] text-[#8A897F]">
+              Your saved CMAs are stored in this browser.
+            </p>
+            {cmaStore.cmas.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-[#D8D4C9] px-6 py-10 text-center">
+                <div className="text-[13.5px] text-[#5A594F]">No saved CMAs yet.</div>
+                <div className="mt-1 text-[12px] text-[#8A897F]">
+                  Build one and hit Save to see it here.
+                </div>
+              </div>
+            ) : (
+              <div className="max-h-[360px] overflow-auto rounded-xl border border-line">
+                {cmaStore.cmas.map((cma, i) => {
+                  const compCount = cma.buckets.reduce((s, b) => s + b.comps.length, 0);
+                  return (
+                    <div
+                      key={cma.id}
+                      className={`flex items-center justify-between gap-3 px-4 py-3 ${
+                        i ? "border-t border-line" : ""
+                      } ${cma.id === currentCmaId ? "bg-[#F0F5F1]" : ""}`}
+                    >
+                      <button
+                        onClick={() => loadCMA(cma)}
+                        className="min-w-0 flex-1 border-none bg-transparent p-0 text-left"
+                      >
+                        <div className="truncate text-[13.5px] font-medium text-ink">
+                          {cma.name}
+                          {cma.id === currentCmaId && (
+                            <span className="ml-2 text-[11px] font-normal text-pine">· open</span>
+                          )}
+                        </div>
+                        <div className="truncate text-[11.5px] text-[#8A897F]">
+                          {cma.subject.name || "No subject"} · {compCount} comp
+                          {compCount !== 1 ? "s" : ""} · updated{" "}
+                          {new Date(cma.updatedAt).toLocaleDateString()}
+                        </div>
+                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            const newId = cmaStore.duplicateCMA(cma.id);
+                            if (newId) {
+                              const dup = cmaStore.cmas.find((c) => c.id === newId);
+                            }
+                          }}
+                          className="border-none bg-transparent p-0 text-[11.5px] text-slate2"
+                          title="Duplicate"
+                        >
+                          Duplicate
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm(`Delete "${cma.name}"?`)) {
+                              cmaStore.deleteCMA(cma.id);
+                              if (cma.id === currentCmaId) setCurrentCmaId(null);
+                            }
+                          }}
+                          className="border-none bg-transparent p-0 text-[11.5px] text-[#8A3A3A]"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <div className="mt-5 flex justify-end">
+              <button
+                onClick={() => setShowLoadPanel(false)}
+                className="rounded-lg border border-[#DDD9CF] px-4 py-2 text-[13px] text-[#5A594F]"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
