@@ -3,8 +3,9 @@ import { useProperties } from "./lib/store";
 import Home from "./components/Home";
 import CompDatabase from "./components/CompDatabase";
 import CostarImport from "./components/CostarImport";
+import CMABuilder from "./components/CMABuilder";
 
-type View = "home" | "database";
+type View = "home" | "database" | "cma";
 
 export default function App() {
   const store = useProperties();
@@ -31,6 +32,9 @@ export default function App() {
           <NavLink active={view === "database"} onClick={() => setView("database")}>
             Comp Database
           </NavLink>
+          <NavLink active={view === "cma"} onClick={() => setView("cma")}>
+            CMA Builder
+          </NavLink>
         </div>
       </nav>
 
@@ -42,6 +46,7 @@ export default function App() {
             setView("database");
             setShowImport(true);
           }}
+          onOpenCMA={() => setView("cma")}
         />
       )}
 
@@ -55,6 +60,8 @@ export default function App() {
           onRequestImport={() => setShowImport(true)}
         />
       )}
+
+      {view === "cma" && <CMABuilder properties={store.properties} />}
 
       {showImport && (
         <CostarImport
@@ -76,7 +83,7 @@ function NavLink({
 }: {
   active: boolean;
   onClick: () => void;
-  children: React.ReactNode;
+  children: any;
 }) {
   return (
     <button

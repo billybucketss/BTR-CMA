@@ -6,10 +6,12 @@ export default function Home({
   properties,
   onOpenDatabase,
   onImport,
+  onOpenCMA,
 }: {
   properties: Property[];
   onOpenDatabase: () => void;
   onImport: () => void;
+  onOpenCMA: () => void;
 }) {
   const stats = useMemo(() => {
     const fpAll = properties.flatMap((p) => p.floorplans);
@@ -106,9 +108,9 @@ export default function Home({
           step="03"
           title="Build a CMA"
           body="Pick a subject property, weight your comps by bedroom, and generate a rent benchmark and map."
-          action="Coming soon"
-          onClick={() => {}}
-          live={false}
+          action="Start a CMA"
+          onClick={onOpenCMA}
+          live
         />
       </div>
 
