@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { Property } from "../types";
-import { TYPE_STYLE, avgPsfOf, fmtPsf, fmtRent, typeStyle } from "../lib/format";
+import { TYPE_STYLE, avgPsfOf, buildAddress, cityStateFallback, fmtPsf, fmtRent, typeStyle } from "../lib/format";
 import PropertyCard from "./PropertyCard";
 import EditModal from "./EditModal";
 import CMAMap from "./CMAMap";
@@ -329,10 +329,11 @@ export default function CompDatabase({
       {showMap && (
         <CMAMap
           pins={filtered
-            .filter((p) => p.address)
+            .filter((p) => p.address || p.city)
             .map((p) => ({
               label: p.name,
-              address: [p.address, p.city, p.state, p.zip].filter(Boolean).join(", "),
+              address: buildAddress(p),
+              fallback: cityStateFallback(p),
               detail: p.rent_min != null
                 ? `${p.rent_min !== p.rent_max && p.rent_max != null ? "$" + p.rent_min.toLocaleString() + "–$" + p.rent_max.toLocaleString() : "$" + p.rent_min.toLocaleString()}`
                 : undefined,

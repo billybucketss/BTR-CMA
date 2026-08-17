@@ -62,7 +62,9 @@ export default function App() {
         />
       )}
 
-      {view === "cma" && <CMABuilder properties={store.properties} />}
+      {view === "cma" && (
+        <CMABuilder properties={store.properties} addProperty={store.addProperty} />
+      )}
 
       {showImport && (
         <CostarImport

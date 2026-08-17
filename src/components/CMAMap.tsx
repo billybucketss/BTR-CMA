@@ -7,6 +7,7 @@ export interface MapPin {
   address: string;
   detail?: string;
   isSubject?: boolean;
+  fallback?: string; // e.g. "City, ST" to try if full address fails
 }
 
 interface GeocodedPin extends MapPin {
@@ -16,9 +17,9 @@ interface GeocodedPin extends MapPin {
 
 /* ── Geocoding via OpenStreetMap Nominatim (free, no key) ── */
 
-async function geocode(address: string): Promise<{ lat: number; lng: number } | null> {
+async function geocodeOnce(query: string): Promise<{ lat: number; lng: number } | null> {
   try {
-    const q = encodeURIComponent(address);
+    const q = encodeURIComponent(query);
     const res = await fetch(
       `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${q}`,
       { headers: { "User-Agent": "BTR-CMA-Workbench/1.0" } }
@@ -28,6 +29,18 @@ async function geocode(address: string): Promise<{ lat: number; lng: number } | 
       return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
     }
   } catch {}
+  return null;
+}
+
+// Try the full address first; if that fails, fall back to city + state.
+async function geocode(pin: MapPin): Promise<{ lat: number; lng: number } | null> {
+  const primary = await geocodeOnce(pin.address);
+  if (primary) return primary;
+  // Fallback: pull "City, ST" out of the address and try just that
+  if (pin.fallback) {
+    await delay(1100);
+    return geocodeOnce(pin.fallback);
+  }
   return null;
 }
 
@@ -43,7 +56,7 @@ async function geocodeAll(
   const results: GeocodedPin[] = [];
   for (let i = 0; i < pins.length; i++) {
     onProgress(i, pins.length);
-    const coords = await geocode(pins[i].address);
+    const coords = await geocode(pins[i]);
     if (coords) {
       results.push({ ...pins[i], ...coords });
     }

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Floorplan, Property } from "../types";
-import { fmtPsf, fmtRent, typeStyle } from "../lib/format";
+import { buildAddress, cityStateFallback, fmtPsf, fmtRent, typeStyle } from "../lib/format";
 import CMAMap from "./CMAMap";
 import type { MapPin } from "./CMAMap";
 import { useCMAs } from "../lib/cma-store";
@@ -368,7 +368,13 @@ function BucketSection({
 
 /* ── Main CMA Builder ── */
 
-export default function CMABuilder({ properties }: { properties: Property[] }) {
+export default function CMABuilder({
+  properties,
+  addProperty,
+}: {
+  properties: Property[];
+  addProperty: (p: Omit<Property, "id">) => void;
+}) {
   const cmaStore = useCMAs();
   const [subject, setSubject] = useState<Subject>(BLANK_SUBJECT);
   const [buckets, setBuckets] = useState<BedroomBucket[]>([
@@ -425,6 +431,42 @@ export default function CMABuilder({ properties }: { properties: Property[] }) {
     setCurrentCmaId(id);
     setSavedFlash(true);
     setTimeout(() => setSavedFlash(false), 2000);
+  };
+
+  const addSubjectToDatabase = () => {
+    if (!subject.name.trim()) {
+      alert("Your subject needs a name before adding it to the database.");
+      return;
+    }
+    const floorplans: Floorplan[] = subject.floorplans.map((fp) => ({
+      beds: fp.beds || null,
+      baths: fp.baths || null,
+      sqft: fp.sqft || null,
+      garage: fp.garage || null,
+      subtype: null,
+      rent: fp.askingRent || null,
+      rent_psf: fp.askingRent && fp.sqft ? Math.round((fp.askingRent / fp.sqft) * 100) / 100 : null,
+      units: fp.units || null,
+    }));
+    const rents = floorplans.map((f) => f.rent).filter((x): x is number => x != null);
+    addProperty({
+      type: "BTR TH",
+      name: subject.name.trim(),
+      address: subject.address || null,
+      city: subject.city || null,
+      state: subject.state || null,
+      zip: subject.zip || null,
+      unit_count: subject.totalUnits ? String(subject.totalUnits) : null,
+      year_built: subject.yearBuilt || null,
+      notes: "Added from CMA Builder as subject property.",
+      website: null,
+      school_district: null,
+      floorplans,
+      rent_min: rents.length ? Math.min(...rents) : null,
+      rent_max: rents.length ? Math.max(...rents) : null,
+      source: "CMA subject",
+    });
+    alert(`"${subject.name}" added to your comp database.`);
   };
 
   const setSub = (k: keyof Subject, v: any) => setSubject((s) => ({ ...s, [k]: v }));
@@ -491,9 +533,6 @@ export default function CMABuilder({ properties }: { properties: Property[] }) {
     const pins: MapPin[] = [];
     // Subject
     if (subject.name && (subject.address || subject.city)) {
-      const addr = [subject.address, subject.city, subject.state, subject.zip]
-        .filter(Boolean)
-        .join(", ");
       const avgRent =
         subject.floorplans.length > 0
           ? Math.round(
@@ -502,7 +541,8 @@ export default function CMABuilder({ properties }: { properties: Property[] }) {
           : null;
       pins.push({
         label: subject.name,
-        address: addr,
+        address: buildAddress(subject),
+        fallback: cityStateFallback(subject),
         detail: avgRent ? `Asking: $${avgRent.toLocaleString()}` : undefined,
         isSubject: true,
       });
@@ -512,14 +552,14 @@ export default function CMABuilder({ properties }: { properties: Property[] }) {
     buckets.forEach((bk) => {
       bk.comps.forEach((c) => {
         const prop = properties.find((p) => p.id === c.propertyId);
-        if (!prop || !prop.address) return;
-        const key = prop.name + "|" + prop.address;
+        if (!prop || (!prop.address && !prop.city)) return;
+        const key = prop.name + "|" + (prop.address || "");
         if (seen.has(key)) return;
         seen.add(key);
-        const addr = [prop.address, prop.city, prop.state, prop.zip].filter(Boolean).join(", ");
         pins.push({
           label: prop.name,
-          address: addr,
+          address: buildAddress(prop),
+          fallback: cityStateFallback(prop),
           detail: c.askingRent ? `${bk.beds}BR: $${c.askingRent.toLocaleString()}` : undefined,
           isSubject: false,
         });
@@ -747,6 +787,17 @@ export default function CMABuilder({ properties }: { properties: Property[] }) {
                   </button>
                 </div>
               ))}
+
+              {subject.name && (
+                <div className="mt-4 flex justify-end border-t border-line pt-4">
+                  <button
+                    onClick={addSubjectToDatabase}
+                    className="rounded-lg border border-[#CFE0D4] bg-white px-3.5 py-2 text-[13px] font-medium text-pine"
+                  >
+                    + Add subject to comp database
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
