@@ -48,6 +48,8 @@ export default function CompDatabase({
   const [showBtrImport, setShowBtrImport] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showFilters, setShowFilters] = useState(false);
+  const [collapsedCities, setCollapsedCities] = useState<Set<string>>(new Set());
+  const [mapProps, setMapProps] = useState<Property[] | null>(null);
 
   const coreType = (t: string): string => {
     const s = (t || "").toUpperCase();
@@ -222,6 +224,35 @@ export default function CompDatabase({
     `whitespace-nowrap rounded-full border px-2.5 py-[5px] text-xs font-medium ${
       active ? "border-pine bg-pine text-white" : "border-[#E0DCD2] bg-white text-[#5A594F]"
     }`;
+
+  const toggleCity = (market: string) => {
+    const n = new Set(collapsedCities);
+    n.has(market) ? n.delete(market) : n.add(market);
+    setCollapsedCities(n);
+  };
+
+  const collapseAll = () => {
+    if (grouped) setCollapsedCities(new Set(grouped.map(([m]) => m)));
+  };
+  const expandAll = () => setCollapsedCities(new Set());
+
+  const propsToPins = (props: Property[]) =>
+    props
+      .filter((p) => p.lat != null || p.address || p.city)
+      .map((p) => ({
+        label: p.name,
+        address: buildAddress(p),
+        fallback: cityStateFallback(p),
+        lat: p.lat,
+        lng: p.lng,
+        detail:
+          p.rent_min != null
+            ? p.rent_min !== p.rent_max && p.rent_max != null
+              ? "$" + p.rent_min.toLocaleString() + "–$" + p.rent_max.toLocaleString()
+              : "$" + p.rent_min.toLocaleString()
+            : undefined,
+        isSubject: false,
+      }));
 
   const CORE_TYPES = ["BTR TH", "BTR SF", "BTR TH/SF", "APT"];
 
@@ -491,19 +522,46 @@ export default function CompDatabase({
           </div>
         )}
 
-        {groupByCity && grouped
-          ? grouped.map(([market, props]) => (
-              <div key={market}>
-                <div className="flex items-center gap-2 border-b border-line bg-[#F2F4F1] px-[18px] py-2">
-                  <span className="font-display text-[13px] font-bold uppercase tracking-wide text-pine">
-                    {market}
-                  </span>
-                  <span className="font-mono text-[11px] text-[#8A897F]">{props.length}</span>
+        {groupByCity && grouped ? (
+          <>
+            <div className="flex items-center gap-3 px-[18px] py-2 text-[11.5px]">
+              <button onClick={collapseAll} className="text-slate2">
+                Collapse all
+              </button>
+              <button onClick={expandAll} className="text-slate2">
+                Expand all
+              </button>
+            </div>
+            {grouped.map(([market, props]) => {
+              const isCollapsed = collapsedCities.has(market);
+              return (
+                <div key={market}>
+                  <div className="flex items-center gap-2 border-b border-line bg-[#F2F4F1] px-[18px] py-2">
+                    <button
+                      onClick={() => toggleCity(market)}
+                      className="flex flex-1 items-center gap-2 border-none bg-transparent p-0 text-left"
+                    >
+                      <span className="text-[10px] text-[#8A897F]">{isCollapsed ? "▶" : "▼"}</span>
+                      <span className="font-display text-[13px] font-bold uppercase tracking-wide text-pine">
+                        {market}
+                      </span>
+                      <span className="font-mono text-[11px] text-[#8A897F]">{props.length}</span>
+                    </button>
+                    <button
+                      onClick={() => setMapProps(props)}
+                      className="rounded-md border border-[#CFE0D4] bg-white px-2.5 py-1 text-[11px] font-medium text-pine"
+                    >
+                      Map this city
+                    </button>
+                  </div>
+                  {!isCollapsed && props.map(renderCard)}
                 </div>
-                {props.map(renderCard)}
-              </div>
-            ))
-          : filtered.map(renderCard)}
+              );
+            })}
+          </>
+        ) : (
+          filtered.map(renderCard)
+        )}
       </div>
 
       <div className="p-6 text-center text-[11.5px] text-[#B0AEA3]">
@@ -523,25 +581,11 @@ export default function CompDatabase({
       )}
 
       {showMap && (
-        <CMAMap
-          pins={filtered
-            .filter((p) => p.lat != null || p.address || p.city)
-            .map((p) => ({
-              label: p.name,
-              address: buildAddress(p),
-              fallback: cityStateFallback(p),
-              lat: p.lat,
-              lng: p.lng,
-              detail:
-                p.rent_min != null
-                  ? p.rent_min !== p.rent_max && p.rent_max != null
-                    ? "$" + p.rent_min.toLocaleString() + "–$" + p.rent_max.toLocaleString()
-                    : "$" + p.rent_min.toLocaleString()
-                  : undefined,
-              isSubject: false,
-            }))}
-          onClose={() => setShowMap(false)}
-        />
+        <CMAMap pins={propsToPins(filtered)} onClose={() => setShowMap(false)} />
+      )}
+
+      {mapProps && (
+        <CMAMap pins={propsToPins(mapProps)} onClose={() => setMapProps(null)} />
       )}
 
       {showBtrImport && (
