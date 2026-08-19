@@ -129,6 +129,7 @@ export default function CMAMap({
   const [status, setStatus] = useState<"loading" | "geocoding" | "ready" | "error">("loading");
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [failedCount, setFailedCount] = useState(0);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -171,6 +172,7 @@ export default function CMAMap({
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
           attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
           maxZoom: 18,
+          crossOrigin: true,
         }).addTo(map);
 
         const subjectIcon = createIcon(L, "#2E5D4B", 14);
@@ -216,6 +218,43 @@ export default function CMAMap({
     };
   }, [pins]);
 
+  const downloadMapImage = async () => {
+    if (!mapInstance.current) return;
+    setDownloading(true);
+    try {
+      const leafletImage = await new Promise<any>((resolve, reject) => {
+        if ((window as any).leafletImage) {
+          resolve((window as any).leafletImage);
+          return;
+        }
+        const script = document.createElement("script");
+        script.src = "https://unpkg.com/leaflet-image@0.4.0/leaflet-image.js";
+        script.onload = () => resolve((window as any).leafletImage);
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+
+      leafletImage(mapInstance.current, (err: any, canvas: HTMLCanvasElement) => {
+        setDownloading(false);
+        if (err) {
+          alert(
+            "Couldn't capture the map automatically. You can use your computer's screenshot tool instead (Windows: Win+Shift+S)."
+          );
+          return;
+        }
+        const link = document.createElement("a");
+        link.download = "cma_map.png";
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      });
+    } catch {
+      setDownloading(false);
+      alert(
+        "Couldn't load the image tool. You can use your screenshot shortcut instead (Windows: Win+Shift+S)."
+      );
+    }
+  };
+
   return (
     <div
       onClick={onClose}
@@ -251,14 +290,24 @@ export default function CMAMap({
               )}
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="rounded-lg border border-[#DDD9CF] px-3 py-1.5 text-[13px] text-[#5A594F]"
-          >
-            Close
-          </button>
+          <div className="flex items-center gap-2">
+            {status === "ready" && (
+              <button
+                onClick={downloadMapImage}
+                disabled={downloading}
+                className="rounded-lg border border-[#CFE0D4] bg-white px-3 py-1.5 text-[13px] font-medium text-pine disabled:opacity-50"
+              >
+                {downloading ? "Capturing…" : "Download image"}
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="rounded-lg border border-[#DDD9CF] px-3 py-1.5 text-[13px] text-[#5A594F]"
+            >
+              Close
+            </button>
+          </div>
         </div>
-
         {/* Map area */}
         <div className="relative flex-1">
           {(status === "loading" || status === "geocoding") && (

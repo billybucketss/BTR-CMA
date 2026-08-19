@@ -39,43 +39,57 @@ export default function Home({
   );
 
   return (
-    <div className="mx-auto max-w-[980px] px-6">
-      {/* Hero */}
-      <div className="pb-8 pt-14">
-        <div className="mb-3 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.2em] text-pine">
-          <span className="h-px w-8 bg-pine" />
-          Build-to-Rent Analysis
-        </div>
-        <h1 className="m-0 max-w-[720px] font-display text-[40px] font-bold leading-[1.08] tracking-[-0.02em] text-ink">
-          Every comp you've pulled, in one place — and the CMA built on top of it.
-        </h1>
-        <p className="mt-4 max-w-[560px] text-[15px] leading-relaxed text-[#5A594F]">
-          Keep a living library of build-to-rent comparables, import fresh market data straight
-          from CoStar, and turn any subject property into a weighted rent benchmark.
-        </p>
-
-        <div className="mt-7 flex flex-wrap gap-3">
-          <button
-            onClick={onOpenDatabase}
-            className="rounded-lg border-none bg-pine px-5 py-2.5 text-[14px] font-medium text-white"
-          >
-            Browse comp database
-          </button>
-          <button
-            onClick={onImport}
-            className="rounded-lg border border-[#CFE0D4] bg-white px-5 py-2.5 text-[14px] font-medium text-pine"
-          >
-            Import from CoStar
-          </button>
+    <div>
+      {/* Logo banner */}
+      <div className="w-full bg-navy">
+        <div className="mx-auto flex max-w-[980px] items-center justify-between px-6 py-5">
+          <img src="/logo.png" alt="D.R. Horton" className="h-14 w-auto rounded" />
+          <div className="text-right">
+            <div className="font-display text-[13px] font-semibold uppercase tracking-[0.15em] text-white/90">
+              BTR CMA Workbench
+            </div>
+            <div className="mt-0.5 text-[11px] text-white/55">Competitor Market Analysis</div>
+          </div>
         </div>
       </div>
 
-      {/* Stats ribbon */}
-      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-5">
-        {[
-          ["Properties", String(stats.props)],
-          ["Floorplans", String(stats.fps)],
-          ["Markets", String(stats.states) + " states"],
+      <div className="mx-auto max-w-[980px] px-6">
+        {/* Hero */}
+        <div className="pb-8 pt-12">
+          <div className="mb-3 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.2em] text-navy">
+            <span className="h-px w-8 bg-navy" />
+            Build-to-Rent Analysis
+          </div>
+          <h1 className="m-0 max-w-[720px] font-display text-[40px] font-bold leading-[1.08] tracking-[-0.02em] text-ink">
+            Every comp you've pulled, in one place — and the CMA built on top of it.
+          </h1>
+          <p className="mt-4 max-w-[560px] text-[15px] leading-relaxed text-[#5A594F]">
+            Keep a living library of build-to-rent comparables, import fresh market data straight
+            from CoStar, and turn any subject property into a weighted rent benchmark.
+          </p>
+
+          <div className="mt-7 flex flex-wrap gap-3">
+            <button
+              onClick={onOpenDatabase}
+              className="rounded-lg border-none bg-navy px-5 py-2.5 text-[14px] font-medium text-white"
+            >
+              Browse comp database
+            </button>
+            <button
+              onClick={onOpenCMA}
+              className="rounded-lg border border-navy/25 bg-white px-5 py-2.5 text-[14px] font-medium text-navy"
+            >
+              Build a CMA
+            </button>
+          </div>
+        </div>
+
+        {/* Stats ribbon */}
+        <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-5">
+          {[
+            ["Properties", String(stats.props)],
+            ["Floorplans", String(stats.fps)],
+            ["Markets", String(stats.states) + " states"],
           ["Median rent", fmtRent(stats.medRent)],
           ["Avg $/SF", stats.avgPsf != null ? fmtPsf(stats.avgPsf) : "—"],
         ].map(([k, v]) => (
@@ -155,6 +169,7 @@ export default function Home({
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
@@ -187,7 +202,7 @@ function Card({
         onClick={onClick}
         disabled={!live}
         className={`self-start text-[13px] font-medium ${
-          live ? "text-pine" : "cursor-default text-[#B0AEA3]"
+          live ? "text-navy" : "cursor-default text-[#B0AEA3]"
         } border-none bg-transparent p-0`}
       >
         {action}

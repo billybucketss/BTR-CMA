@@ -5,6 +5,7 @@ import CMAMap from "./CMAMap";
 import type { MapPin } from "./CMAMap";
 import { useCMAs } from "../lib/cma-store";
 import type { SavedCMA } from "../lib/cma-store";
+import { exportCMAtoExcel } from "../lib/excel-export";
 
 /* ── Types ── */
 
@@ -607,6 +608,18 @@ export default function CMABuilder({
               className="rounded-lg border-none bg-pine px-4 py-2 text-[13px] font-medium text-white"
             >
               {savedFlash ? "Saved ✓" : currentCmaId ? "Save" : "Save CMA"}
+            </button>
+            <button
+              onClick={() => {
+                if (!subject.name && buckets.every((b) => b.comps.length === 0)) {
+                  alert("Add a subject and some comps before exporting.");
+                  return;
+                }
+                exportCMAtoExcel(cmaName, subject, buckets);
+              }}
+              className="rounded-lg border border-[#CFE0D4] bg-white px-4 py-2 text-[13px] font-medium text-pine"
+            >
+              Export Excel
             </button>
             <button
               onClick={() => setShowMap(true)}

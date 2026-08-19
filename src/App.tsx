@@ -20,7 +20,7 @@ export default function App() {
           onClick={() => setView("home")}
           className="flex items-center gap-2 border-none bg-transparent p-0"
         >
-          <div className="h-5 w-2 rounded-sm bg-pine" />
+          <div className="h-5 w-2 rounded-sm bg-navy" />
           <span className="font-display text-[15px] font-bold tracking-tight text-ink">
             BTR CMA Workbench
           </span>
@@ -93,7 +93,7 @@ function NavLink({
     <button
       onClick={onClick}
       className={`rounded-lg border-none px-3 py-1.5 text-[13px] font-medium ${
-        active ? "bg-[#EDF1EE] text-pine" : "bg-transparent text-[#6E6D64]"
+        active ? "bg-[#EAEEF6] text-navy" : "bg-transparent text-[#6E6D64]"
       }`}
     >
       {children}
